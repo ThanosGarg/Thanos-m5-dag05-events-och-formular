@@ -25,7 +25,6 @@ const regler: Record<string, (text: string) => string> = {
   datum: (text: string) => valideraDatum(text, dagensDatum()),
   antal: valideraAntal,
 };
-
 // 1. visaFel(falt, meddelande): visa ett felmeddelande under fältet.
 //    - Finns det inget <p class="falt-fel" id="NAMN-fel"> efter fältet? Skapa det (insertAdjacentElement("afterend", p)).
 //    - p.textContent = meddelande
@@ -33,11 +32,44 @@ const regler: Record<string, (text: string) => string> = {
 //      Annars: falt.setAttribute("aria-invalid", "true") och aria-describedby = p:ts id.
 function visaFel(falt: Falt, meddelande: string): void {
   // TODO
+  const felId = `${falt.name}-fel`;
+  let felText = document.getElementById(felId);
+
+  if (!felText) {
+    felText = document.createElement("p");
+    felText.className = "falt-fel";
+    felText.id = felId;
+    falt.insertAdjacentElement("afterend", felText);
+  }
+
+  felText.textContent = meddelande;
+
+  if (meddelande === "") {
+    falt.removeAttribute("aria-invalid");
+    falt.removeAttribute("aria-describedby");
+    return;
+  }
+
+  falt.setAttribute("aria-invalid", "true");
+  falt.setAttribute("aria-describedby", felId);
 }
 
 // 2. Koppla varje fält i regler: validera när användaren LÄMNAR fältet ("blur"),
 //    och validera på nytt vid "input" men bara om fältet redan är markerat som fel (aria-invalid="true").
 // TODO
+for (const [namn, validera] of Object.entries(regler)) {
+  const falt = hittaFalt(namn);
+
+  falt.addEventListener("blur", () => {
+    visaFel(falt, validera(falt.value));
+  });
+
+  falt.addEventListener("input", () => {
+    if (falt.getAttribute("aria-invalid") === "true") {
+      visaFel(falt, validera(falt.value));
+    }
+  });
+}
 
 // 3. Vid "submit": preventDefault(). Validera hela formuläret med valideraFormular.
 //    - Finns fel: visa dem alla med visaFel, flytta fokus till första felaktiga fältet.
@@ -46,3 +78,38 @@ function visaFel(falt: Falt, meddelande: string): void {
 //    så loopa och ta bara värden där typeof varde === "string".
 //    Använd hittaFalt(namn) för att hämta ett fält med rätt typ.
 // TODO
+form.addEventListener("submit", (handelse) => {
+  handelse.preventDefault();
+  bekraftelse.textContent = "";
+
+  const varden: Record<string, string> = {};
+
+  for (const [namn, varde] of new FormData(form)) {
+    if (typeof varde === "string") {
+      varden[namn] = varde;
+    }
+  }
+
+  const fel = valideraFormular(varden, dagensDatum());
+  let forstaFel: Falt | null = null;
+
+  for (const namn of Object.keys(regler)) {
+    const falt = hittaFalt(namn);
+    const meddelande = fel[namn] ?? "";
+
+    visaFel(falt, meddelande);
+
+    if (meddelande !== "" && forstaFel === null) {
+      forstaFel = falt;
+    }
+  }
+
+  if (forstaFel) {
+    forstaFel.focus();
+    return;
+  }
+
+  bekraftelse.textContent = "Tack! Vi bekräftar din bokning inom ett dygn.";
+  form.reset();
+});
+//// When focus moved to the Name field, NVDA read the label and the error message: "Fyll i ditt namn."
