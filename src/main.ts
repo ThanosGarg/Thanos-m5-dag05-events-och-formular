@@ -19,6 +19,13 @@ const filterGrupp = hamta("#filter");
 // 2. Lägg till handelse.preventDefault() i lyssnaren. Vad händer med länken?
 //    Ta bort preventDefault igen när du provat.
 // TODO
+const knapp = hamta("#hero .knapp");
+
+knapp.addEventListener("click", (handelse) => {
+  console.log(handelse.type);
+  console.log(handelse.target);
+  console.log(handelse.target);
+});
 
 
 // DEL 2: filtret ----------------------------------------------------------
@@ -26,6 +33,21 @@ const filterGrupp = hamta("#filter");
 //    uppdatera rubriken och markera den billigaste lunchen som dagens rätt (om det finns någon lunch).
 // 4. Anropa uppdateraMeny("alla") direkt, och koppla filterknapparna med kopplaFilter.
 // TODO
+function uppdateraMeny(filter: Filter): void {
+  const ratter = filtreraMeny(meny, filter);
+
+  visaMeny(lista, ratter);
+  uppdateraRubrik(rubrik, ratter.length);
+
+  const luncher = filtreraMeny(ratter, "lunch");
+  const dagensRatt = billigast(luncher);
+
+  if (dagensRatt) {
+    markeraDagensRatt(lista, dagensRatt.id);
+  }
+}
+uppdateraMeny("alla");
+kopplaFilter(filterGrupp, uppdateraMeny);
 
 
 // DEL 3 (fördjupning): beställningen ---------------------------------------
@@ -37,3 +59,16 @@ const orderRef = {
   tom: hamta("#order-tom"),
 };
 // TODO
+let order: OrderRad[] = [];
+
+kopplaLaggTill(lista, (id) => {
+  order = laggTillIOrder(order, id);
+  visaOrder(orderRef, order, meny);
+});
+
+const rensaKnapp = hamta("#rensa-order");
+
+rensaKnapp.addEventListener("click", () => {
+  order = rensaOrder();
+  visaOrder(orderRef, order, meny);
+}); 
