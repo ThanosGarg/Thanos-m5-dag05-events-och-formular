@@ -1,5 +1,6 @@
 // Dag 4–5: Funktioner som bygger sidans innehåll. Använd createElement och textContent.
 import { formateraPris } from "./pris";
+import { hittaRatt, totalPris } from "./meny";
 import type { Ratt, OrderRad } from "./typer";
 
 // De tre elementen som visar beställningen.
@@ -8,7 +9,6 @@ export interface OrderRef {
   summa: HTMLElement;
   tom: HTMLElement;
 }
-import { hittaRatt, totalPris } from "./meny";
 
 export function skapaRattKort(ratt: Ratt): HTMLElement {
   const kort = document.createElement("article");
@@ -30,12 +30,20 @@ export function skapaRattKort(ratt: Ratt): HTMLElement {
 
   // DAG 5, TODO: skapa en knapp och lägg den sist i kortet:
   //   <button type="button" class="lagg-i-order" data-id="1" aria-label="Lägg Kardemummabulle i beställningen">Lägg i beställning</button>
-  kort.append(bild, rubrik, text, pris);
+  const knapp = document.createElement("button");
+  knapp.type = "button";
+  knapp.className = "lagg-i-order";
+  knapp.dataset.id = String(ratt.id);
+  knapp.setAttribute("aria-label", `Lägg ${ratt.namn} i beställningen`);
+  knapp.textContent = "Lägg i beställning";
+
+  kort.append(bild, rubrik, text, pris, knapp);
   return kort;
 }
 
 export function visaMeny(container: HTMLElement, ratter: Ratt[]): void {
   container.replaceChildren();
+
   if (ratter.length === 0) {
     const tom = document.createElement("p");
     tom.className = "tom";
@@ -43,6 +51,7 @@ export function visaMeny(container: HTMLElement, ratter: Ratt[]): void {
     container.append(tom);
     return;
   }
+
   for (const ratt of ratter) {
     container.append(skapaRattKort(ratt));
   }
@@ -67,4 +76,24 @@ export function markeraDagensRatt(container: HTMLElement, id: number): void {
 //   - ref.summa.textContent = totalpriset (totalPris från meny.js), formaterat
 export function visaOrder(ref: OrderRef, order: OrderRad[], meny: Ratt[]): void {
   // TODO
+  ref.lista.replaceChildren();
+
+  for (const rad of order) {
+    const ratt = hittaRatt(meny, rad.id);
+    if (!ratt) continue;
+
+    const li = document.createElement("li");
+
+    const namn = document.createElement("span");
+    namn.textContent = `${rad.antal} × ${ratt.namn}`;
+
+    const pris = document.createElement("span");
+    pris.textContent = formateraPris(ratt.pris * rad.antal);
+
+    li.append(namn, pris);
+    ref.lista.append(li);
+  }
+
+  ref.tom.classList.toggle("dold", order.length > 0);
+  ref.summa.textContent = formateraPris(totalPris(order, meny));
 }
